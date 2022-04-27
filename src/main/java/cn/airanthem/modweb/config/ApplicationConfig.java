@@ -13,5 +13,10 @@ public class ApplicationConfig {
     /**
      * Modbus 监听端口
      */
-    private Integer port;
+    private Integer port = 50052;
+
+    /**
+     * 请求超时时间
+     */
+    private Integer timeout = Integer.MAX_VALUE;
 }

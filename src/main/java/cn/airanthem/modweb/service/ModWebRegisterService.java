@@ -31,8 +31,9 @@ public class ModWebRegisterService implements ApplicationListener<ContextRefresh
             String name = annotation.name();
             if (ModWebHandler.class.isAssignableFrom(handlerToRegisterClass)) {
                 manager.register(name, (ModWebHandler) handlerToRegister);
+                LOG.info("modbus service handler named {} registered", name);
             }else {
-                LOG.warn("handler named {} [{}] doesn't implement ModWebHandler, skipped", name, entry.getKey());
+                LOG.warn("modbus service handler named {} [{}] doesn't implement ModWebHandler, skipped", name, entry.getKey());
             }
         }
     }
