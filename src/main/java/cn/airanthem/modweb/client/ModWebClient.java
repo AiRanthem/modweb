@@ -12,10 +12,12 @@ import com.digitalpetri.modbus.requests.ModbusRequest;
 import com.digitalpetri.modbus.requests.ReadHoldingRegistersRequest;
 import com.digitalpetri.modbus.requests.ReadInputRegistersRequest;
 import com.digitalpetri.modbus.requests.ReadWriteMultipleRegistersRequest;
+import com.digitalpetri.modbus.requests.WriteMultipleRegistersRequest;
 import com.digitalpetri.modbus.responses.ModbusResponse;
 import com.digitalpetri.modbus.responses.ReadHoldingRegistersResponse;
 import com.digitalpetri.modbus.responses.ReadInputRegistersResponse;
 import com.digitalpetri.modbus.responses.ReadWriteMultipleRegistersResponse;
+import com.digitalpetri.modbus.responses.WriteMultipleRegistersResponse;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.netty.buffer.ByteBuf;
@@ -28,13 +30,19 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 public class ModWebClient {
@@ -111,6 +119,17 @@ public class ModWebClient {
             }
         }
 
+        public Map<Integer, Result> writeMultipleRegisters(int address, byte[] bytes, int unitId) {
+            ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(bytes.length);
+            buffer.writeBytes(bytes);
+            WriteMultipleRegistersRequest request = new WriteMultipleRegistersRequest(0, buffer.readableBytes() / 2, buffer);
+            try {
+                return requestModbus(request, unitId, (Function<WriteMultipleRegistersResponse, Result>) response -> new Result(0, new byte[0]));
+            } catch (Exception e) {
+                throw new ModbusRequestException(e);
+            }
+        }
+
         private ByteBuf getBuffer(byte[] bytes) {
             ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(bytes.length);
             buffer.writeBytes(bytes);
@@ -127,7 +146,7 @@ public class ModWebClient {
          *
          * @param callBack a function transforms abstract ModbusResponse to a Result that you need
          */
-        private <Q extends ModbusRequest, A extends ModbusResponse> Map<Integer, Result> requestModbus(Q requset, int unitId, Function<A, Result> callBack) throws ExecutionException, InterruptedException, InvalidProtocolBufferException {
+        private <Q extends ModbusRequest, A extends ModbusResponse> Map<Integer, Result> requestModbus(Q requset, int unitId, Function<A, Result> callBack) throws ExecutionException, InterruptedException {
             Map<Integer, Future<ModbusResponse>> futureMap = new HashMap<>();
             Map<Integer, Result> resultMap = new HashMap<>();
             for (Map.Entry<Integer, ModbusTcpMaster> entry : masters.entrySet()) {
@@ -151,6 +170,15 @@ public class ModWebClient {
 
     public RequestExecutor all() {
         return new RequestExecutor(slaves);
+    }
+
+    public RequestExecutor selected(int... ids) {
+        List<Integer> idList = Arrays.stream(ids).boxed().collect(Collectors.toList());
+        return new RequestExecutor(
+                slaves.entrySet().stream()
+                        .filter(e -> idList.contains(e.getKey()))
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+        );
     }
 
     private ModbusTcpMaster generateMaster(String ipv4, Integer port) {
