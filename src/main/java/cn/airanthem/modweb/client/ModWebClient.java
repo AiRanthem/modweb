@@ -145,6 +145,7 @@ public class ModWebClient {
          *
          * @param callBack a function transforms abstract ModbusResponse to a Result that you need
          */
+        @SuppressWarnings("unchecked")
         private <Q extends ModbusRequest, A extends ModbusResponse> Map<Integer, Result> requestModbus(Q requset, int unitId, Function<A, Result> callBack) throws ExecutionException, InterruptedException {
             Map<Integer, Future<ModbusResponse>> futureMap = new HashMap<>();
             Map<Integer, Result> resultMap = new HashMap<>();
