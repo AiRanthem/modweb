@@ -1,6 +1,6 @@
 package cn.airanthem.modweb.client;
 
-import cn.airanthem.modweb.config.ApplicationConfig;
+import cn.airanthem.modweb.config.ModWebConfig;
 import cn.airanthem.modweb.enums.StatusCode;
 import cn.airanthem.modweb.exception.ModbusRequestException;
 import cn.airanthem.modweb.exception.ServiceRequestException;
@@ -22,6 +22,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.util.ReferenceCountUtil;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.slf4j.Logger;
@@ -30,9 +31,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +41,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Component
 public class ModWebClient {
@@ -51,7 +49,7 @@ public class ModWebClient {
     private final Map<Integer, ModbusTcpMaster> slaves = new ConcurrentHashMap<>();
 
     @Resource
-    ApplicationConfig applicationConfig;
+    ModWebConfig modWebConfig;
 
     @AllArgsConstructor
     @Getter
@@ -67,7 +65,7 @@ public class ModWebClient {
             this.masters = masters;
         }
 
-        public Map<Integer, Result> requestService(String name, byte[] payload) {
+        public Map<Integer, Result> requestService(String name, byte[] payload) throws ServiceRequestException {
             Request requestBody = Request.newBuilder().setName(name).setPayload(ByteString.copyFrom(payload)).build();
             ByteBuf buffer = getBuffer(requestBody.toByteArray());
             ReadWriteMultipleRegistersRequest request = new ReadWriteMultipleRegistersRequest(0, 10, 10, buffer.readableBytes() / 2, buffer);
@@ -105,7 +103,7 @@ public class ModWebClient {
             }
         }
 
-        public Map<Integer, Result> readHoldingRegisters(int address, int quantity, int unitId) {
+        public Map<Integer, Result> readHoldingRegisters(int address, int quantity, int unitId) throws ModbusRequestException {
             ReadHoldingRegistersRequest request = new ReadHoldingRegistersRequest(address, quantity);
             try {
                 return requestModbus(request, unitId, (Function<ReadHoldingRegistersResponse, Result>) response -> {
@@ -119,10 +117,10 @@ public class ModWebClient {
             }
         }
 
-        public Map<Integer, Result> writeMultipleRegisters(int address, byte[] bytes, int unitId) {
+        public Map<Integer, Result> writeMultipleRegisters(int address, byte[] bytes, int unitId) throws ModbusRequestException {
             ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(bytes.length);
             buffer.writeBytes(bytes);
-            WriteMultipleRegistersRequest request = new WriteMultipleRegistersRequest(0, buffer.readableBytes() / 2, buffer);
+            WriteMultipleRegistersRequest request = new WriteMultipleRegistersRequest(address, buffer.readableBytes() / 2, buffer);
             try {
                 return requestModbus(request, unitId, (Function<WriteMultipleRegistersResponse, Result>) response -> new Result(0, new byte[0]));
             } catch (Exception e) {
@@ -139,6 +137,7 @@ public class ModWebClient {
                 buffer.writeByte(-1);
                 buffer.writeByte(1);
             }
+            buffer.retain();
             return buffer;
         }
 
@@ -158,14 +157,15 @@ public class ModWebClient {
             for (Map.Entry<Integer, Future<ModbusResponse>> entry : futureMap.entrySet()) {
                 ModbusResponse response = entry.getValue().get();
                 resultMap.put(entry.getKey(), callBack.apply((A) response));
+                ReferenceCountUtil.release(response);
             }
             return resultMap;
         }
     }
 
-    public void putSlave(Integer id, String ipv4, Integer port) {
+    public void putPeer(Integer id, String ipv4, Integer port) {
         slaves.put(id, generateMaster(ipv4, port));
-        LOG.info("modbus slave {}:{} added", ipv4, port);
+        LOG.info("Modbus slave {}:{} added", ipv4, port);
     }
 
     public RequestExecutor all() {
@@ -181,11 +181,18 @@ public class ModWebClient {
         );
     }
 
+    public void close() {
+        slaves.values().forEach(ModbusTcpMaster::disconnect);
+        LOG.info("All modbus connections closed.");
+    }
+
     private ModbusTcpMaster generateMaster(String ipv4, Integer port) {
         ModbusTcpMasterConfig config = new ModbusTcpMasterConfig
                 .Builder(ipv4)
                 .setPort(port)
-                .setTimeout(Duration.ofMillis(applicationConfig.getTimeout())).build();
+                .setTimeout(Duration.ofMillis(modWebConfig.getTimeout()))
+                .setLazy(false)
+                .build();
         ModbusTcpMaster modbusTcpMaster = new ModbusTcpMaster(config);
         modbusTcpMaster.connect();
         return modbusTcpMaster;

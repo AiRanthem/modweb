@@ -14,7 +14,7 @@ import javax.annotation.Resource;
 
 @Configuration
 @ComponentScan("cn.airanthem.modweb")
-@EnableConfigurationProperties(ApplicationConfig.class)
+@EnableConfigurationProperties(ModWebConfig.class)
 public class ModWebAutoConfig {
     private static final Logger LOG = LoggerFactory.getLogger(ModWebAutoConfig.class);
 
@@ -22,15 +22,15 @@ public class ModWebAutoConfig {
     ModBusRequestHandler mainHandler;
 
     @Resource
-    ApplicationConfig applicationConfig;
+    ModWebConfig modWebConfig;
 
     @Bean
     public ModbusTcpSlave modbusTcpSlave() {
         ModbusTcpSlaveConfig config = new ModbusTcpSlaveConfig.Builder().build();
         ModbusTcpSlave modbusTcpSlave = new ModbusTcpSlave(config);
         modbusTcpSlave.setRequestHandler(mainHandler);
-        modbusTcpSlave.bind("0.0.0.0", applicationConfig.getPort());
-        LOG.info("ModWeb started, listening at 0.0.0.0:{}", applicationConfig.getPort());
+        modbusTcpSlave.bind("0.0.0.0", modWebConfig.getPort());
+        LOG.info("ModWeb started, listening at 0.0.0.0:{}", modWebConfig.getPort());
         return modbusTcpSlave;
     }
 }

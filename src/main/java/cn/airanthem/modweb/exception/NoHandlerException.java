@@ -1,6 +1,5 @@
 package cn.airanthem.modweb.exception;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @Getter

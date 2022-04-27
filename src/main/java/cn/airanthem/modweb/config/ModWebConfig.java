@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Getter
 @Setter
-public class ApplicationConfig {
+public class ModWebConfig {
     /**
      * Modbus 监听端口
      */

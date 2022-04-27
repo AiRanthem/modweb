@@ -12,6 +12,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.util.ReferenceCountUtil;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -25,7 +26,8 @@ public class ModBusRequestHandler implements ServiceRequestHandler {
 
     @Override
     public void onReadWriteMultipleRegisters(ServiceRequest<ReadWriteMultipleRegistersRequest, ReadWriteMultipleRegistersResponse> service) {
-        ByteBuf values = service.getRequest().getValues();
+        ReadWriteMultipleRegistersRequest modbusRequest = service.getRequest();
+        ByteBuf values = modbusRequest.getValues();
         byte[] body = new byte[values.readableBytes()];
         values.readBytes(body);
         if (body[body.length - 1] == 1 && body[body.length - 2] == -1 && body[body.length - 3] == 1) {
@@ -45,6 +47,7 @@ public class ModBusRequestHandler implements ServiceRequestHandler {
         } catch (Throwable e) {
             service.sendResponse(response(StatusCode.UNKNOWN_ERROR));
         }
+        ReferenceCountUtil.release(modbusRequest);
     }
 
     private ReadWriteMultipleRegistersResponse response(StatusCode statusCode, byte[] body) {

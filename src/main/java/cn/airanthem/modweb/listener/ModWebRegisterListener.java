@@ -1,7 +1,8 @@
-package cn.airanthem.modweb.service;
+package cn.airanthem.modweb.listener;
 
 import cn.airanthem.modweb.annotation.ModBusService;
 import cn.airanthem.modweb.iface.ModWebHandler;
+import cn.airanthem.modweb.service.ModWebHandlerManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
@@ -13,9 +14,9 @@ import javax.annotation.Resource;
 import java.util.Map;
 
 @Service
-public class ModWebRegisterService implements ApplicationListener<ContextRefreshedEvent> {
+public class ModWebRegisterListener implements ApplicationListener<ContextRefreshedEvent> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ModWebRegisterService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ModWebRegisterListener.class);
 
     @Resource
     ModWebHandlerManager manager;
