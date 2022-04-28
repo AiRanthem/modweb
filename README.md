@@ -131,3 +131,31 @@ public class SomeComponent {
     }
 }
 ```
+
+## Make an Original Modbus Request
+> **CAUTION** `ModWeb` will use Modbus function `ReadWriteMultipleRegisters`, pleasu do avoid this function
+> at the port `ModWeb` listens. I suggest that you should use a specific port to run ModWeb Services without
+> any other usage.
+
+```java
+import cn.airanthem.modweb.client.ModWebClient;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.Resource;
+import java.util.Map;
+
+@Component
+public class SomeComponent {
+    @Resource
+    ModWebClient modWebClient;
+
+    /**
+     * just use the raw Modbus function name instead of `requestService`.
+     * please usd `CTRL/CMD + P` in IDEA to view the param list 'cause I'm lazy :P
+     */
+    public void requestAllPeers() {
+        Map<Integer, ModWebClient.Result> resultMap = modWebClient
+                .all().readInputRegister(0, 10, 0);
+    }
+}
+```
