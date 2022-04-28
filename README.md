@@ -1,4 +1,7 @@
 # ModWeb
+ModWeb is a 'Web Framework' but runs on Modbus. It helps you to define a service in
+Spring Boot and request the services you defined. ModWeb even simplifies the way you
+call a raw Modbus request very easily.
 
 ## Install
 
@@ -14,7 +17,8 @@ Just import it in your spring boot project.
 
 > Because `ModWeb` is a new project and is still developing, when you read this document it stands a good chance
 > that I haven't upload ModWeb to any public maven repository yet !-_-
-> Maybe you can `clone this repository` and run `mvn install` first :)
+> 
+> Maybe you can `clone this repository` and run `mvn install` to install locally :)
 
 ## Configuration
 
