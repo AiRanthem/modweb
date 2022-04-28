@@ -1,6 +1,6 @@
 package cn.airanthem.modweb.register;
 
-import cn.airanthem.modweb.annotation.ModBusService;
+import cn.airanthem.modweb.annotation.ModWebService;
 import cn.airanthem.modweb.exception.NoHandlerException;
 import cn.airanthem.modweb.service.ModWebHandlerManager;
 import org.junit.jupiter.api.Assertions;
@@ -12,7 +12,7 @@ import java.util.Arrays;
 
 @SpringBootTest
 public class BadTest {
-    @ModBusService(name = "bad")
+    @ModWebService(name = "bad")
     public static class BadHandler {
         public byte[] handle(byte[] payload) {
             System.out.println(Arrays.toString(payload));

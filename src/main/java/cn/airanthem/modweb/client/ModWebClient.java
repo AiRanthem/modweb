@@ -22,6 +22,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -30,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.lang.reflect.Array;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -67,11 +69,18 @@ public class ModWebClient {
 
         public Map<Integer, Result> requestService(String name, byte[] payload) throws ServiceRequestException {
             Request requestBody = Request.newBuilder().setName(name).setPayload(ByteString.copyFrom(payload)).build();
-            ByteBuf buffer = getBuffer(requestBody.toByteArray());
-            ReadWriteMultipleRegistersRequest request = new ReadWriteMultipleRegistersRequest(0, 10, 10, buffer.readableBytes() / 2, buffer);
-
+            byte[] bodyBytes = requestBody.toByteArray();
+            // use simple 1 -1 1 encode to ensure buffer size is even
+            if (bodyBytes.length >= 3 && bodyBytes.length % 2 != 0) {
+                int x = bodyBytes.length;
+                bodyBytes = Arrays.copyOf(bodyBytes, x + 3);
+                bodyBytes[x] = 1;
+                bodyBytes[x + 1] = -1;
+                bodyBytes[x + 2] = 1;
+            }
+            ReadWriteMultipleRegistersRequestPrototype prototype = new ReadWriteMultipleRegistersRequestPrototype(0, 0, 0, bodyBytes.length / 2, bodyBytes);
             try {
-                return requestModbus(request, 0, (Function<ReadWriteMultipleRegistersResponse, Result>) response -> {
+                return requestModbus(prototype, 0, (Function<ReadWriteMultipleRegistersResponse, Result>) response -> {
                     ByteBuf buf = response.getRegisters();
                     byte[] bytes = new byte[buf.readableBytes()];
                     buf.readBytes(bytes);
@@ -90,7 +99,7 @@ public class ModWebClient {
         }
 
         public Map<Integer, Result> readInputRegister(int address, int quantity, int unitId) {
-            ReadInputRegistersRequest request = new ReadInputRegistersRequest(address, quantity);
+            ReadInputRegistersRequestPrototype request = new ReadInputRegistersRequestPrototype(address, quantity);
             try {
                 return requestModbus(request, unitId, (Function<ReadInputRegistersResponse, Result>) response -> {
                     ByteBuf buf = response.getRegisters();
@@ -104,7 +113,7 @@ public class ModWebClient {
         }
 
         public Map<Integer, Result> readHoldingRegisters(int address, int quantity, int unitId) throws ModbusRequestException {
-            ReadHoldingRegistersRequest request = new ReadHoldingRegistersRequest(address, quantity);
+            ReadHoldingRegistersRequestPrototype request = new ReadHoldingRegistersRequestPrototype(address, quantity);
             try {
                 return requestModbus(request, unitId, (Function<ReadHoldingRegistersResponse, Result>) response -> {
                     ByteBuf buf = response.getRegisters();
@@ -118,9 +127,7 @@ public class ModWebClient {
         }
 
         public Map<Integer, Result> writeMultipleRegisters(int address, byte[] bytes, int unitId) throws ModbusRequestException {
-            ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(bytes.length);
-            buffer.writeBytes(bytes);
-            WriteMultipleRegistersRequest request = new WriteMultipleRegistersRequest(address, buffer.readableBytes() / 2, buffer);
+            WriteMultipleRegistersRequestPrototype request = new WriteMultipleRegistersRequestPrototype(address, bytes.length / 2, bytes);
             try {
                 return requestModbus(request, unitId, (Function<WriteMultipleRegistersResponse, Result>) response -> new Result(0, new byte[0]));
             } catch (Exception e) {
@@ -128,30 +135,16 @@ public class ModWebClient {
             }
         }
 
-        private ByteBuf getBuffer(byte[] bytes) {
-            ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(bytes.length);
-            buffer.writeBytes(bytes);
-            // use simple 1 -1 1 encode to ensure buffer size is even
-            if (bytes.length >= 3 && bytes.length % 2 != 0) {
-                buffer.writeByte(1);
-                buffer.writeByte(-1);
-                buffer.writeByte(1);
-            }
-            buffer.retain();
-            return buffer;
-        }
-
         /**
-         *
          * @param callBack a function transforms abstract ModbusResponse to a Result that you need
          */
         @SuppressWarnings("unchecked")
-        private <Q extends ModbusRequest, A extends ModbusResponse> Map<Integer, Result> requestModbus(Q requset, int unitId, Function<A, Result> callBack) throws ExecutionException, InterruptedException {
+        private <Q extends ModbusRequest, A extends ModbusResponse> Map<Integer, Result> requestModbus(ModbusRequestPrototype<Q> prototype, int unitId, Function<A, Result> callBack) throws ExecutionException, InterruptedException {
             Map<Integer, Future<ModbusResponse>> futureMap = new HashMap<>();
             Map<Integer, Result> resultMap = new HashMap<>();
             for (Map.Entry<Integer, ModbusTcpMaster> entry : masters.entrySet()) {
                 ModbusTcpMaster master = entry.getValue();
-                CompletableFuture<ModbusResponse> future = master.sendRequest(requset, unitId);
+                CompletableFuture<ModbusResponse> future = master.sendRequest(prototype.get(), unitId);
                 futureMap.put(entry.getKey(), future);
             }
             // join
@@ -184,6 +177,7 @@ public class ModWebClient {
 
     public void close() {
         slaves.values().forEach(ModbusTcpMaster::disconnect);
+        slaves.clear();
         LOG.info("All modbus connections closed.");
     }
 

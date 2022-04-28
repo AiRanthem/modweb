@@ -1,6 +1,6 @@
 package cn.airanthem.modweb.listener;
 
-import cn.airanthem.modweb.annotation.ModBusService;
+import cn.airanthem.modweb.annotation.ModWebService;
 import cn.airanthem.modweb.iface.ModWebHandler;
 import cn.airanthem.modweb.service.ModWebHandlerManager;
 import org.slf4j.Logger;
@@ -24,11 +24,11 @@ public class ModWebRegisterListener implements ApplicationListener<ContextRefres
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
         ApplicationContext applicationContext = event.getApplicationContext();
-        Map<String, Object> beansWithAnnotation = applicationContext.getBeansWithAnnotation(ModBusService.class);
+        Map<String, Object> beansWithAnnotation = applicationContext.getBeansWithAnnotation(ModWebService.class);
         for (Map.Entry<String, Object> entry : beansWithAnnotation.entrySet()) {
             Object handlerToRegister = entry.getValue();
             Class<?> handlerToRegisterClass = handlerToRegister.getClass();
-            ModBusService annotation = handlerToRegisterClass.getAnnotation(ModBusService.class);
+            ModWebService annotation = handlerToRegisterClass.getAnnotation(ModWebService.class);
             String name = annotation.name();
             if (ModWebHandler.class.isAssignableFrom(handlerToRegisterClass)) {
                 manager.register(name, (ModWebHandler) handlerToRegister);
