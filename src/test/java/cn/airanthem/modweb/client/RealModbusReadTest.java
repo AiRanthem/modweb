@@ -27,6 +27,9 @@ public class RealModbusReadTest {
     public void testReadTwice() {
         client.putPeer(1, "127.0.0.1", 502);
         client.putPeer(2, "127.0.0.1", 502);
+        client.putPeer(3, "127.0.0.1", 502);
+        client.putPeer(4, "127.0.0.1", 502);
+
         Map<Integer, ModWebClient.Result> resultMap = client.all().readInputRegister(0, 16, 0);
         System.out.println(resultMap);
     }

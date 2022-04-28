@@ -132,7 +132,7 @@ public class ModWebClient {
             ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(bytes.length);
             buffer.writeBytes(bytes);
             // use simple 1 -1 1 encode to ensure buffer size is even
-            if (bytes.length % 2 != 0) {
+            if (bytes.length >= 3 && bytes.length % 2 != 0) {
                 buffer.writeByte(1);
                 buffer.writeByte(-1);
                 buffer.writeByte(1);
