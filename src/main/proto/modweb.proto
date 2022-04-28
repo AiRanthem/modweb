@@ -8,6 +8,7 @@ option objc_class_prefix = "RTG";
 message Request {
   string name = 1;
   bytes payload = 2;
+  int32 part = 3;
 }
 
 message Response {
