@@ -48,6 +48,7 @@ public class ModWebClient {
     @Resource
     ModWebConfig modWebConfig;
     public static final Integer PARTITION_SIZE = 200;
+    private static int longRequestWarnTimes = 5;
 
     @AllArgsConstructor
     @Getter
@@ -60,7 +61,6 @@ public class ModWebClient {
         private final Map<Integer, ModbusTcpMaster> masters;
 
 
-        private int longRequestWarnTimes = 5;
 
         public RequestExecutor(Map<Integer, ModbusTcpMaster> masters) {
             this.masters = masters;
@@ -76,8 +76,9 @@ public class ModWebClient {
         }
 
         private Map<Integer, Result> partitionRequestStrategy(String name, byte[] payload) {
-            if (longRequestWarnTimes-- > 0) {
-                LOG.warn("long request provided by ModWeb is not recommended");
+            if (longRequestWarnTimes > 0) {
+                LOG.warn("long request provided by ModWeb is not recommended (this warning will still occur {} times", longRequestWarnTimes);
+                longRequestWarnTimes--;
             }
             List<byte[]> splitedPayload = ClientUtils.splitPayload(payload, PARTITION_SIZE);
             int size = splitedPayload.size();

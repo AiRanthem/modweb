@@ -7,6 +7,7 @@ call a raw Modbus request very easily.
 1. ServiceRuntimeException throwable
 2. ModWebResultUtils
 3. Now ModWeb Service can transfer unlimited data size instead of 240 bounded by Modbus
+4. RequestContext for some information
 
 ## Installation
 
