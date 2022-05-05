@@ -17,7 +17,7 @@ Just import it in your spring boot project.
 <dependency>
     <groupId>cn.airanthem</groupId>
     <artifactId>modweb-boot-starter</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
 </dependency>
 ```
 
