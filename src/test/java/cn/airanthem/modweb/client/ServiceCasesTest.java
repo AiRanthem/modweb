@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @SpringBootTest
-class CaseLoadDataTest {
+class ServiceCasesTest {
 
     @Resource
     ModWebConfig modWebConfig;

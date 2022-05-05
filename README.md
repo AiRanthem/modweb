@@ -3,6 +3,12 @@ ModWeb is a 'Web Framework' but runs on Modbus. It helps you to define a service
 Spring Boot and request the services you defined. ModWeb even simplifies the way you
 call a raw Modbus request very easily.
 
+## Developing in 0.0.2
+1. ServiceRuntimeException throwable
+2. ModWebResultUtils
+3. Now ModWeb Service can transfer unlimited data size instead of 240 bounded by Modbus
+4. RequestContext for some information
+
 ## Installation
 
 Just import it in your spring boot project.

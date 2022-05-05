@@ -6,6 +6,8 @@ import cn.airanthem.modweb.exception.ModbusRequestException;
 import cn.airanthem.modweb.exception.ServiceRequestException;
 import cn.airanthem.modweb.proto.Request;
 import cn.airanthem.modweb.proto.Response;
+import cn.airanthem.modweb.util.ClientUtils;
+import cn.airanthem.modweb.util.ModWebResultUtils;
 import com.digitalpetri.modbus.master.ModbusTcpMaster;
 import com.digitalpetri.modbus.master.ModbusTcpMasterConfig;
 import com.digitalpetri.modbus.requests.ModbusRequest;
@@ -45,6 +47,8 @@ public class ModWebClient {
 
     @Resource
     ModWebConfig modWebConfig;
+    public static final Integer PARTITION_SIZE = 200;
+    private static int longRequestWarnTimes = 5;
 
     @AllArgsConstructor
     @Getter
@@ -56,12 +60,53 @@ public class ModWebClient {
     public static class RequestExecutor {
         private final Map<Integer, ModbusTcpMaster> masters;
 
+
+
         public RequestExecutor(Map<Integer, ModbusTcpMaster> masters) {
             this.masters = masters;
         }
 
         public Map<Integer, Result> requestService(String name, byte[] payload) throws ServiceRequestException {
-            Request requestBody = Request.newBuilder().setName(name).setPayload(ByteString.copyFrom(payload)).build();
+
+            if (payload.length <= PARTITION_SIZE) {
+                return directRequestStrategy(name, payload);
+            } else {
+                return partitionRequestStrategy(name, payload);
+            }
+        }
+
+        private Map<Integer, Result> partitionRequestStrategy(String name, byte[] payload) {
+            if (longRequestWarnTimes > 0) {
+                LOG.warn("long request provided by ModWeb is not recommended (this warning will still occur {} times", longRequestWarnTimes);
+                longRequestWarnTimes--;
+            }
+            List<byte[]> splitedPayload = ClientUtils.splitPayload(payload, PARTITION_SIZE);
+            int size = splitedPayload.size();
+            Map<Integer, Result> resultMap = null;
+            for (int i = 0; i < size; i++) {
+                Request request = Request.newBuilder().setName(name).setPart(size - 1 - i)
+                        .setPayload(ByteString.copyFrom(splitedPayload.get(i))).build();
+                resultMap = sendRequestPart(request);
+                List<Integer> failures = ModWebResultUtils.whoFails(resultMap);
+                if (failures.size() != 0) {
+                    LOG.error("long request declined for peer {} fails", failures);
+                    Request declineRequest = Request.newBuilder().setName(name).setPart(-1).build();
+                    sendRequestPart(declineRequest);
+                    break;
+                }
+            }
+            return resultMap;
+        }
+
+
+        private Map<Integer, Result> directRequestStrategy(String name, byte[] payload) {
+            Request request = Request.newBuilder().setName(name).setPart(0)
+                    .setPayload(ByteString.copyFrom(payload)).build();
+            return sendRequestPart(request);
+        }
+
+        private Map<Integer, Result> sendRequestPart(Request requestBody) {
+            String name = requestBody.getName();
             byte[] bodyBytes = requestBody.toByteArray();
             // use simple 1 -1 1 encode to ensure buffer size is even
             if (bodyBytes.length >= 3 && bodyBytes.length % 2 != 0) {
@@ -123,6 +168,20 @@ public class ModWebClient {
             WriteMultipleRegistersRequestPrototype request = new WriteMultipleRegistersRequestPrototype(address, bytes.length / 2, bytes);
             try {
                 return requestModbus(request, unitId, (Function<WriteMultipleRegistersResponse, Result>) response -> new Result(0, new byte[0]));
+            } catch (Exception e) {
+                throw new ModbusRequestException(e);
+            }
+        }
+
+        public Map<Integer, Result> readWriteMultipleRegisters(int readAddress, int readQuantity, int writeAddress, byte[] data, int unitId) throws ModbusRequestException {
+            ReadWriteMultipleRegistersRequestPrototype request = new ReadWriteMultipleRegistersRequestPrototype(readAddress, readQuantity, writeAddress, data.length / 2, data);
+            try {
+                return requestModbus(request, unitId, (Function<ReadWriteMultipleRegistersResponse, Result>) response -> {
+                    ByteBuf buf = response.getRegisters();
+                    byte[] bytes = new byte[buf.readableBytes()];
+                    buf.readBytes(bytes);
+                    return new Result(0, bytes);
+                });
             } catch (Exception e) {
                 throw new ModbusRequestException(e);
             }
