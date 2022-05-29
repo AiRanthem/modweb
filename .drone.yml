@@ -12,17 +12,7 @@ steps:
   - name: auth
     image: robertstettner/drone-mvn-auth
     settings:
-      servers:
-        - id: maven-releases
-          username:
-            from_secret: nexus_username
-          password:
-            from_secret: nexus_password
-        - id: maven-snapshots
-          username:
-            from_secret: nexus_username
-          password:
-            from_secret: nexus_password
+      secrets: [ maven_servers ]
       profiles:
         - id: my-profile
           repositories:
