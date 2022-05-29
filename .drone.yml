@@ -1,0 +1,59 @@
+kind: pipeline
+type: docker
+name: default
+
+trigger:
+  branch:
+    - master
+  event:
+    - push
+
+steps:
+  - name: auth
+    image: robertstettner/drone-mvn-auth
+    settings:
+      servers:
+        - id: maven-releases
+          username:
+            from_secret: maven_username
+          password:
+            from_secret: maven_password
+        - id: maven-snapshots
+          username:
+            from_secret: maven_username
+          password:
+            from_secret: maven_password
+      profiles:
+        - id: my-profile
+          repositories:
+            - id: maven-releases
+              name: Release Repository of AiRanthem
+              url: http://nexus.xw1.airanthem.cn/repository/maven-releases/
+              layout: default
+            - id: maven-snapshots
+              name: Snapshot Repository of AiRanthem
+              url: http://nexus.xw1.airanthem.cn/repository/maven-snapshots/
+              layout: default
+          plugin_repositories:
+            - id: maven-releases
+              name: Release Repository of AiRanthem
+              url: http://nexus.xw1.airanthem.cn/repository/maven-releases/
+              layout: default
+            - id: maven-snapshots
+              name: Snapshot Repository of AiRanthem
+              url: http://nexus.xw1.airanthem.cn/repository/maven-snapshots/
+              layout: default
+      active_profiles:
+        - my-profile
+  - name: package
+    image: maven:3.8.5-jdk-8
+    volumes:
+      - name: cache # The Volume's name
+        path: /drone/src/.m2 # The path in the container
+    commands:
+      - mvn clean package -gs settings.xml
+
+volumes:
+  - name: cache # The name use in this pipeline,
+    host:
+      path: /var/lib/cache/maven # The path be used in the host.
