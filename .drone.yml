@@ -42,8 +42,7 @@ steps:
       - name: cache # The Volume's name
         path: /drone/src/.m2 # The path in the container
     commands:
-#      - mvn clean deploy -gs settings.xml
-      - cat settings.xml
+      - mvn clean deploy -gs settings.xml
 
 volumes:
   - name: cache # The name use in this pipeline,
