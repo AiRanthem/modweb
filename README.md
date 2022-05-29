@@ -21,7 +21,8 @@ Just import it in your spring boot project.
 </dependency>
 ```
 
-If you cannot use github repository for some reason, just install from source:
+Now I'm trying to publish it to maven central repo.. before that, you may have to install from source
+
 ```shell
 git clone https://github.com/AiRanthem/modweb.git
 cd modweb
