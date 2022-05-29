@@ -12,7 +12,8 @@ steps:
   - name: auth
     image: robertstettner/drone-mvn-auth
     settings:
-      secrets: [ maven_servers ]
+      servers:
+        from_secret: maven_servers
       profiles:
         - id: my-profile
           repositories:
