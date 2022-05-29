@@ -45,13 +45,14 @@ steps:
               layout: default
       active_profiles:
         - my-profile
-  - name: package
+  - name: build
     image: maven:3.8.5-jdk-8
     volumes:
       - name: cache # The Volume's name
         path: /drone/src/.m2 # The path in the container
     commands:
-      - mvn clean deploy -gs settings.xml
+#      - mvn clean deploy -gs settings.xml
+      - cat settings.xml
 
 volumes:
   - name: cache # The name use in this pipeline,
