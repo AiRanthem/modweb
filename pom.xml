@@ -92,10 +92,15 @@
 
     <distributionManagement>
         <repository>
-            <id>github</id>
-            <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/AiRanthem/modweb</url>
+            <id>maven-releases</id>
+            <name>Release Repository of AiRanthem</name>
+            <url>http://nexus.xw1.airanthem.cn/repository/maven-releases/</url>
         </repository>
+        <snapshotRepository>
+            <id>maven-snapshots</id>
+            <name>Snapshot Repository of AiRanthem</name>
+            <url>http://nexus.xw1.airanthem.cn/repository/maven-snapshots/</url>
+        </snapshotRepository>
     </distributionManagement>
 
 </project>
